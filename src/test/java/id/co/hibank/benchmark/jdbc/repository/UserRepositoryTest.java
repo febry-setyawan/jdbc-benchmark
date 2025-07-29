@@ -48,6 +48,7 @@ class UserRepositoryTest {
 
     User mockUser;
 
+    @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() {
         mockUser = new User(1L, "John", "john@example.com", new Role(2L, "Admin"));
@@ -62,6 +63,7 @@ class UserRepositoryTest {
             .thenAnswer(i -> ((Supplier<?>) i.getArgument(0)).get());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testSave_shouldExecuteInsertSql() {
         userRepository.save(mockUser);
@@ -70,6 +72,7 @@ class UserRepositoryTest {
         verify(statementSpec).params(any(Map.class));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testUpdate_shouldExecuteUpdateSql() {
         userRepository.update(mockUser);
@@ -78,6 +81,7 @@ class UserRepositoryTest {
         verify(statementSpec).params(any(Map.class));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testDelete_shouldExecuteDeleteSql() {
         userRepository.delete(1L);
@@ -95,6 +99,7 @@ class UserRepositoryTest {
         assertEquals("Admin", result.getRole().getName());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testFindAll_shouldReturnUserList() {
         when(resilienceHelper.safe(any(Supplier.class))).thenReturn(List.of(mockUser));
@@ -104,6 +109,7 @@ class UserRepositoryTest {
         assertEquals("John", result.get(0).getName());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testFindAll_shouldReturnEmptyListIfNoUsers() {
         when(resilienceHelper.safe(any(Supplier.class))).thenReturn(emptyList());
@@ -137,11 +143,11 @@ class UserRepositoryTest {
         assertThrows(RuntimeException.class, () -> userRepository.delete(1L));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testSearch_shouldReturnEmptyListIfNoResult() {
         JdbcClient.StatementSpec stmtSpec = mock(JdbcClient.StatementSpec.class);
         JdbcClient.MappedQuerySpec<User> querySpec = mock(JdbcClient.MappedQuerySpec.class);
-
         when(jdbcClient.sql(anyString())).thenReturn(stmtSpec);
         when(stmtSpec.param(anyString(), any())).thenReturn(stmtSpec);
         when(stmtSpec.query(any(RowMapper.class))).thenReturn(querySpec);
@@ -152,6 +158,7 @@ class UserRepositoryTest {
         assertTrue(result.isEmpty());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testSearch_shouldQueryJdbcClient() {
         User expectedUser = new User(1L, "John", "john@example.com", new Role(2L, "Admin"));
@@ -168,6 +175,7 @@ class UserRepositoryTest {
         assertEquals("John", results.get(0).getName());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testSearch_withNullRole_shouldNotThrowException() {
         User userWithoutRole = new User(1L, "John", "john@example.com", null);
@@ -183,6 +191,7 @@ class UserRepositoryTest {
         assertNull(result.get(0).getRole());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testSearch_shouldCaptureSqlStatement() {
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
@@ -200,11 +209,11 @@ class UserRepositoryTest {
         assertTrue(capturedSql.contains("FROM users u JOIN roles r ON u.role_id = r.id"));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testSearch_withInvalidSort_shouldFallbackToDefault() {
         User dummyUser = new User(1L, "John", "john@example.com", new Role(1L, "Admin"));
         JdbcClient.MappedQuerySpec<User> querySpec = mock(JdbcClient.MappedQuerySpec.class);
-
         when(jdbcClient.sql(contains("ORDER BY u.name ASC"))).thenReturn(statementSpec);
         when(statementSpec.param(anyString(), any())).thenReturn(statementSpec);
         when(statementSpec.query(any(RowMapper.class))).thenReturn(querySpec);

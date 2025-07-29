@@ -8,7 +8,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.util.List;
@@ -50,6 +49,7 @@ class RoleRepositoryTest {
         roleRepository = new RoleRepository(jdbcClient, resilienceHelper, executor);
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testSave_shouldExecuteInsert() {
         when(executor.apply(anyString())).thenReturn(statementSpec);
@@ -63,6 +63,7 @@ class RoleRepositoryTest {
         verify(executor).apply(startsWith("INSERT INTO"));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testFindById_shouldReturnRole() {
         when(resilienceHelper.safeOptional(any(Supplier.class))).thenReturn(Optional.of(mockRole));
@@ -92,6 +93,7 @@ class RoleRepositoryTest {
         assertTrue(result.isEmpty());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testUpdate_shouldCallUpdateQuery() {
         when(executor.apply(anyString())).thenReturn(statementSpec);
@@ -105,6 +107,7 @@ class RoleRepositoryTest {
         verify(executor).apply(startsWith("UPDATE"));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testDelete_shouldCallDeleteQuery() {
         when(executor.apply(anyString())).thenReturn(statementSpec);

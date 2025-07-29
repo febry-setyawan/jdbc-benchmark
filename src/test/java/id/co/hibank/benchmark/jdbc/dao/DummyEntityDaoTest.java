@@ -28,6 +28,7 @@ class DummyEntityDaoTest {
         dao = new DummyEntityDao(jdbcClient, resilienceHelper);
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testSaveDelegatesToJdbcClient() {
         DummyEntity entity = new DummyEntity(1L, "Test");
@@ -53,6 +54,7 @@ class DummyEntityDaoTest {
         assertEquals(1, result.size());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testUpdateCallsJdbcClient() {
         DummyEntity entity = new DummyEntity(1L, "Updated");
@@ -61,6 +63,7 @@ class DummyEntityDaoTest {
         verify(resilienceHelper).executeResilient(any(Supplier.class), any(Function.class));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testDeleteCallsJdbcClient() {
         when(resilienceHelper.executeResilient(any(Supplier.class), any(Function.class))).thenAnswer(i -> ((Supplier<?>) i.getArgument(0)).get());
