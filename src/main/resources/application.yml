@@ -4,6 +4,51 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+    hikari:
+      # Nama pool koneksi, berguna untuk logging dan pemantauan.
+      pool-name: HiBankJdbcBenchmarkPool
+      
+      # Ukuran maksimum pool: Jumlah koneksi maksimum yang diizinkan dalam pool, termasuk koneksi yang sedang digunakan dan yang idle.
+      # Nilai yang disarankan: (jumlah core CPU * 2) + jumlah koneksi ke DB yang diharapkan.
+      # Mulai dengan nilai yang wajar (misalnya, 10-20) dan sesuaikan berdasarkan beban.
+      maximum-pool-size: 20 
+
+      # Ukuran idle minimum: Jumlah koneksi idle minimum yang akan dipertahankan HikariCP dalam pool.
+      # Jika koneksi idle turun di bawah nilai ini, HikariCP akan mencoba membuat koneksi baru hingga mencapai minimum.
+      # Idealnya, setel ini sama dengan maximum-pool-size jika Anda selalu mengharapkan beban tinggi,
+      # atau sedikit lebih rendah untuk menghemat sumber daya saat beban rendah.
+      minimum-idle: 5 
+
+      # Timeout koneksi: Waktu maksimum (dalam milidetik) untuk menunggu koneksi dari pool.
+      # Jika waktu ini terlampaui, pengecualian akan dilemparkan.
+      # Default: 30000 (30 detik).
+      connection-timeout: 30000 
+
+      # Timeout idle: Waktu maksimum (dalam milidetik) sebuah koneksi diizinkan untuk idle di pool.
+      # Koneksi yang idle lebih lama dari ini akan ditutup dan dihapus dari pool.
+      # Default: 600000 (10 menit). Penting: Harus lebih kecil dari max-lifetime.
+      idle-timeout: 600000 
+
+      # Max lifetime: Waktu maksimum (dalam milidetik) sebuah koneksi diizinkan untuk hidup di pool.
+      # Setelah waktu ini, koneksi akan ditutup dan dihapus dari pool, terlepas dari apakah sedang digunakan atau idle.
+      # Ini membantu mencegah masalah koneksi yang sudah lama (stale connections).
+      # Default: 1800000 (30 menit). Harus lebih kecil dari timeout database.
+      max-lifetime: 1800000 
+
+      # Auto-commit: Menentukan apakah koneksi akan secara otomatis melakukan commit setelah setiap pernyataan SQL.
+      # Default: true. Untuk aplikasi Spring, seringkali dikelola oleh @Transactional, jadi pastikan ini sesuai.
+      auto-commit: true 
+
+      # Validation timeout: Waktu maksimum (dalam milidetik) untuk menunggu validasi koneksi.
+      # Digunakan saat HikariCP memvalidasi koneksi sebelum mengembalikannya ke aplikasi.
+      # Default: 5000 (5 detik).
+      validation-timeout: 5000
+
+      # Leak detection threshold: Waktu (dalam milidetik) setelah koneksi dianggap "bocor" (tidak dikembalikan ke pool).
+      # Jika koneksi tidak dikembalikan dalam waktu ini, pesan peringatan akan dicatat.
+      # Hanya untuk debugging, jangan gunakan di produksi karena ada overhead. Setel ke 0 untuk menonaktifkan.
+      leak-detection-threshold: 2000 # Nonaktifkan di produksi, aktifkan untuk debugging jika diperlukan (misal: 2000)
+
   h2:
     console:
       enabled: true
@@ -11,6 +56,17 @@ spring:
   sql:
     init:
       mode: always
+
+# Konfigurasi Cache dengan Caffeine
+cache:
+  type: caffeine # Tentukan Caffeine sebagai implementasi cache
+  cache-names: users, roles # Daftar nama cache yang akan digunakan
+  caffeine:
+    spec: maximumSize=500,expireAfterWrite=60s # Konfigurasi default untuk semua cache
+    # Atau konfigurasi spesifik per nama cache (opsional)
+    # caches:
+    #   users: maximumSize=100,expireAfterWrite=30s
+    #   roles: maximumSize=50,expireAfterWrite=300s
 
 logging:
   level:
@@ -22,20 +78,60 @@ resilience4j:
   retry:
     instances:
       jdbc-retry:
-        max-attempts: 3
-        wait-duration: 300ms
+        # Jumlah maksimum percobaan ulang, termasuk percobaan awal.
+        # Terlalu banyak dapat meningkatkan latensi, terlalu sedikit dapat menyebabkan kegagalan yang tidak perlu.
+        max-attempts: 3 # Umumnya 3-5 percobaan ulang adalah titik awal yang baik.
+        # Durasi tunggu antar percobaan ulang.
+        # Exponential backoff (misal: `wait-duration-expression: "T(java.time.Duration).ofMillis(500 * (long)Math.pow(2, #retryAttempt - 1))"`)
+        # lebih disarankan daripada durasi tetap untuk menghindari membanjiri layanan yang pulih.
+        wait-duration: 500ms # Durasi tetap, bisa diganti dengan ekspresi backoff eksponensial.
+        # Pengecualian yang akan memicu percobaan ulang.
         retry-exceptions:
           - java.sql.SQLException
+          - java.util.concurrent.TimeoutException # Tambahkan jika TimeLimiter dapat melempar TimeoutException yang ingin di-retry.
+          - java.util.concurrent.CompletionException # Jika TimeLimiter membungkus pengecualian dalam CompletionException.
+        # Pengecualian yang TIDAK akan memicu percobaan ulang (misal: kesalahan validasi).
+        ignore-exceptions:
+          - id.co.hibank.benchmark.jdbc.exception.NotFoundException # Contoh: Jika resource tidak ditemukan, tidak perlu retry.
+          - java.lang.IllegalArgumentException
+
   circuitbreaker:
     instances:
       jdbc-cb:
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-        sliding-window-size: 10
+        # Ambang batas tingkat kegagalan (dalam persentase) di mana Circuit Breaker akan beralih ke status OPEN.
+        # Jika 50%, berarti 50% dari panggilan terakhir gagal.
+        failure-rate-threshold: 50 # Umumnya 50% adalah titik awal yang baik.
+        # Durasi (dalam detik) di mana Circuit Breaker akan tetap dalam status OPEN sebelum beralih ke HALF_OPEN.
+        # Ini memberikan waktu bagi layanan yang mendasari untuk pulih.
+        wait-duration-in-open-state: 10s # Umumnya 5-30 detik.
+        # Ukuran jendela geser (sliding window) untuk mengukur tingkat keberhasilan/kegagalan.
+        # Bisa berbasis jumlah panggilan (COUNT_BASED) atau waktu (TIME_BASED).
+        sliding-window-size: 100 # Jumlah panggilan yang akan dianalisis dalam jendela. Umumnya 100-200.
+        # Tipe jendela geser: COUNT_BASED (berdasarkan jumlah panggilan) atau TIME_BASED (berdasarkan durasi waktu).
+        sliding-window-type: COUNT_BASED
+        # Jumlah minimum panggilan yang diperlukan dalam jendela geser sebelum Circuit Breaker dapat membuat keputusan.
+        # Ini mencegah Circuit Breaker terbuka terlalu cepat karena beberapa kegagalan awal.
+        minimum-number-of-calls: 10 # Pastikan ada cukup data sebelum mengambil keputusan.
+        # Pengecualian yang akan dicatat sebagai kegagalan oleh Circuit Breaker.
+        record-exceptions:
+          - java.sql.SQLException
+          - java.util.concurrent.TimeoutException
+          - java.util.concurrent.CompletionException
+        # Pengecualian yang akan dicatat sebagai keberhasilan, meskipun secara teknis merupakan pengecualian.
+        # Misalnya, jika Anda ingin mengabaikan NotFoundException sebagai kegagalan CB.
+        ignore-exceptions:
+          - id.co.hibank.benchmark.jdbc.exception.NotFoundException
+
   timelimiter:
     instances:
       jdbc-tl:
-        timeout-duration: 3s
+        # Durasi timeout (dalam detik) untuk operasi.
+        # Jika operasi tidak selesai dalam waktu ini, TimeoutException akan dilemparkan.
+        # Penting untuk mencegah operasi yang menggantung dan membebani thread.
+        timeout-duration: 3s # Sesuaikan dengan waktu respons yang diharapkan dari DB.
+        # Apakah TimeLimiter harus membatalkan (menginterupsi) thread yang mendasari jika timeout terjadi.
+        # Default: true. Umumnya disarankan untuk true.
+        cancel-running-future: true
 
 management:
   endpoints:
