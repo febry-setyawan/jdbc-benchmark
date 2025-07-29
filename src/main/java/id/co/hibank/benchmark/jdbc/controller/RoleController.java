@@ -56,12 +56,11 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Void> update(@PathVariable @Min(1) Long id, @RequestBody @Valid RoleDto dto) {
+    public ResponseEntity<RoleDto> update(@PathVariable Long id, @RequestBody @Valid RoleDto dto) {
         Role updated = roleMapper.toEntity(dto);
         updated.setId(id);
         service.update(updated);
-        log.info("Role updated: {}", id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(roleMapper.toDto(updated));
     }
 
     @DeleteMapping("/{id}")

@@ -12,6 +12,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import id.co.hibank.benchmark.jdbc.model.User;
+import id.co.hibank.benchmark.jdbc.model.dto.RoleDto;
 import id.co.hibank.benchmark.jdbc.model.dto.UserDto;
 import id.co.hibank.benchmark.jdbc.model.mapper.UserMapper;
 import id.co.hibank.benchmark.jdbc.service.UserService;
@@ -54,12 +55,12 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Void> update(@PathVariable Long id, @RequestBody @Valid UserDto dto) {
+    public ResponseEntity<UserDto> update(@PathVariable Long id, @RequestBody @Valid UserDto dto) {
         User updated = userMapper.toEntity(dto);
         updated.setId(id);
         service.update(updated);
         log.info("User updated: {}", id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(userMapper.toDto(updated));
     }
 
     @DeleteMapping("/{id}")
