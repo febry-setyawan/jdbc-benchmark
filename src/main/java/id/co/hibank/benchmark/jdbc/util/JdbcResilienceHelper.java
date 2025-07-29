@@ -57,7 +57,7 @@ public class JdbcResilienceHelper {
             }
         };
 
-        return Decorators.ofSupplier(timeLimitedSupplier)
+        return Decorators.ofSupplier(() -> TimerUtil.time(timeLimitedSupplier))
             .withRetry(retry)
             .withCircuitBreaker(circuitBreaker)
             .withFallback(List.of(Exception.class), fallback)

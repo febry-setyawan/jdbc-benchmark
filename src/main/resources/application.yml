@@ -15,25 +15,26 @@ spring:
 logging:
   level:
     org.springframework.jdbc.core: DEBUG
-    
+    io.github.resilience4j: DEBUG
+
 resilience4j:
   retry:
     instances:
-      jdbcClientRetry:
+      jdbc-retry:
         max-attempts: 3
-        wait-duration: 200ms
+        wait-duration: 300ms
         retry-exceptions:
           - java.sql.SQLException
-      circuitbreaker:
-        instances:
-          jdbcClientCB:
-            failure-rate-threshold: 50
-            wait-duration-in-open-state: 5s
-            sliding-window-size: 10
-      timelimiter:
-        instances:
-          jdbcClientTimeout:
-            timeout-duration: 3s
+  circuitbreaker:
+    instances:
+      jdbc-cb:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        sliding-window-size: 10
+  timelimiter:
+    instances:
+      jdbc-tl:
+        timeout-duration: 3s
 
 management:
   endpoints:

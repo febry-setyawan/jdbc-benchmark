@@ -1,13 +1,16 @@
 package id.co.hibank.benchmark.jdbc.dao;
 
 import id.co.hibank.benchmark.jdbc.util.JdbcResilienceHelper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 public abstract class JdbcClientDaoImpl<T> implements BaseDao<T> {
 
     protected final JdbcClient jdbcClient;
@@ -20,7 +23,8 @@ public abstract class JdbcClientDaoImpl<T> implements BaseDao<T> {
             JdbcClient jdbcClient,
             JdbcResilienceHelper resilienceHelper,
             Class<T> type,
-            String tableName) {
+            String tableName
+    ) {
         this(jdbcClient, resilienceHelper, type, tableName, jdbcClient::sql);
     }
 
@@ -29,7 +33,8 @@ public abstract class JdbcClientDaoImpl<T> implements BaseDao<T> {
             JdbcResilienceHelper resilienceHelper,
             Class<T> type,
             String tableName,
-            Function<String, JdbcClient.StatementSpec> executor) {
+            Function<String, JdbcClient.StatementSpec> executor
+    ) {
         this.jdbcClient = jdbcClient;
         this.resilienceHelper = resilienceHelper;
         this.type = type;
@@ -41,64 +46,81 @@ public abstract class JdbcClientDaoImpl<T> implements BaseDao<T> {
     public void save(T entity) {
         Map<String, Object> paramMap = toMap(entity);
         String sql = buildInsertSql(paramMap);
+        log.debug("Executing INSERT: {}", sql);
         resilienceHelper.executeResilient(
                 () -> executor.apply(sql)
                         .params(paramMap)
                         .update(),
-                ex -> {
-                    throw new RuntimeException("Insert failed", ex);
-                });
-    }
-
-    @Override
-    public T findById(Long id) {
-        return resilienceHelper.safeOptional(
-                () -> executor.apply("SELECT * FROM " + tableName + " WHERE id = :id")
-                        .param("id", id)
-                        .query(type)
-                        .single())
-                .orElse(null);
-    }
-
-    @Override
-    public List<T> findAll() {
-        return resilienceHelper.safe(
-                () -> executor.apply("SELECT * FROM " + tableName)
-                        .query(type)
-                        .list());
+                fail("Insert failed")
+        );
     }
 
     @Override
     public void update(T entity) {
         Map<String, Object> paramMap = toMap(entity);
+        if (!paramMap.containsKey("id")) {
+            throw new IllegalArgumentException("Missing 'id' in entity for update");
+        }
         String sql = buildUpdateSql(paramMap);
+        log.debug("Executing UPDATE: {}", sql);
         resilienceHelper.executeResilient(
                 () -> executor.apply(sql)
                         .params(paramMap)
                         .update(),
-                ex -> {
-                    throw new RuntimeException("Update failed", ex);
-                });
+                fail("Update failed")
+        );
     }
 
     @Override
     public void delete(Long id) {
         String sql = "DELETE FROM " + tableName + " WHERE id = :id";
+        log.debug("Executing DELETE: {}", sql);
         resilienceHelper.executeResilient(
                 () -> executor.apply(sql)
                         .param("id", id)
                         .update(),
-                ex -> {
-                    throw new RuntimeException("Delete failed", ex);
-                });
+                fail("Delete failed")
+        );
+    }
+
+    @Override
+    public T findById(Long id) {
+        String sql = "SELECT * FROM " + tableName + " WHERE id = :id";
+        log.debug("Executing SELECT by ID: {}", sql);
+        return resilienceHelper.safeOptional(
+                () -> executor.apply(sql)
+                        .param("id", id)
+                        .query(type)
+                        .single()
+        ).orElse(null);
+    }
+
+    @Override
+    public List<T> findAll() {
+        String sql = "SELECT * FROM " + tableName;
+        log.debug("Executing SELECT all: {}", sql);
+        return Optional.ofNullable(
+                resilienceHelper.safe(
+                        () -> executor.apply(sql)
+                                .query(type)
+                                .list()
+                )
+        ).orElse(List.of());
     }
 
     protected abstract Map<String, Object> toMap(T entity);
 
+    protected Function<Throwable, Integer> fail(String message) {
+        return ex -> {
+            log.error("{}: {}", message, ex.getMessage());
+            throw new RuntimeException(message, ex);
+        };
+    }
+
     private String buildInsertSql(Map<String, Object> fields) {
         String columns = String.join(", ", fields.keySet());
         String params = fields.keySet().stream().map(k -> ":" + k).collect(Collectors.joining(", "));
-        return "INSERT INTO " + tableName + " (" + columns + ") VALUES (" + params + ")";
+        return String.format("INSERT INTO %s (%s) VALUES (%s)", tableName, columns, params);
     }
 
     private String buildUpdateSql(Map<String, Object> fields) {
@@ -106,6 +128,6 @@ public abstract class JdbcClientDaoImpl<T> implements BaseDao<T> {
                 .filter(k -> !"id".equals(k))
                 .map(k -> k + " = :" + k)
                 .collect(Collectors.joining(", "));
-        return "UPDATE " + tableName + " SET " + setClause + " WHERE id = :id";
+        return String.format("UPDATE %s SET %s WHERE id = :id", tableName, setClause);
     }
 }
