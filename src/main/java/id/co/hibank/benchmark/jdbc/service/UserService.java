@@ -1,5 +1,6 @@
 package id.co.hibank.benchmark.jdbc.service;
 
+import id.co.hibank.benchmark.jdbc.exception.NotFoundException;
 import id.co.hibank.benchmark.jdbc.model.User;
 import id.co.hibank.benchmark.jdbc.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,7 @@ public class UserService implements BaseService<User> {
     public User get(Long id) {
         User user = repo.findById(id);
         if (user == null) {
-            throw new IllegalArgumentException("User not found for id: " + id);
+            throw new NotFoundException("User not found for id: " + id);
         }
         return user;
     }

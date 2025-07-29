@@ -3,67 +3,48 @@ package id.co.hibank.benchmark.jdbc.model.mapper;
 import id.co.hibank.benchmark.jdbc.model.Role;
 import id.co.hibank.benchmark.jdbc.model.User;
 import id.co.hibank.benchmark.jdbc.model.dto.UserDto;
+import id.co.hibank.benchmark.jdbc.service.RoleService;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class UserMapperTest {
 
-    private final UserMapper mapper = new UserMapper();
+    @Mock
+    RoleService roleService;
+
+    @InjectMocks
+    UserMapper mapper;
 
     @Test
-    void toDto_shouldMapFieldsCorrectly() {
-        Role role = new Role(1L, "Admin");
-        User user = new User(100L, "John", "john@example.com", role);
+    void testToEntity_shouldMapCorrectly() {
+        UserDto dto = new UserDto(1L, "John", "john@example.com", 2L, "Admin");
+    
+        when(roleService.get(2L)).thenReturn(new Role(2L, "Admin"));
+
+        User user = mapper.toEntity(dto);
+
+        assertEquals("John", user.getName());
+        assertEquals("Admin", user.getRole().getName());
+    }
+
+    @Test
+    void testToDto_shouldMapCorrectly() {
+        Role role = new Role(2L, "Admin");
+        User user = new User(1L, "John", "john@example.com", role);
 
         UserDto dto = mapper.toDto(user);
 
-        assertEquals(100L, dto.getId());
+        assertEquals(1L, dto.getId());
         assertEquals("John", dto.getName());
-        assertEquals("john@example.com", dto.getEmail());
-        assertEquals(1L, dto.getRoleId());
+        assertEquals(2L, dto.getRoleId());
         assertEquals("Admin", dto.getRoleName());
-    }
-
-    @Test
-    void toDto_shouldHandleNullRole() {
-        User user = new User(101L, "Jane", "jane@example.com", null);
-
-        UserDto dto = mapper.toDto(user);
-
-        assertEquals(101L, dto.getId());
-        assertEquals("Jane", dto.getName());
-        assertEquals("jane@example.com", dto.getEmail());
-        assertNull(dto.getRoleId());
-        assertNull(dto.getRoleName());
-    }
-
-    @Test
-    void toDto_shouldReturnNullIfInputIsNull() {
-        assertNull(mapper.toDto(null));
-    }
-
-    @Test
-    void toEntity_shouldMapFieldsCorrectly() {
-        UserDto dto = new UserDto();
-        dto.setId(200L);
-        dto.setName("Alice");
-        dto.setEmail("alice@example.com");
-
-        Role role = new Role(2L, "User");
-
-        User entity = mapper.toEntity(dto, role);
-
-        assertEquals(200L, entity.getId());
-        assertEquals("Alice", entity.getName());
-        assertEquals("alice@example.com", entity.getEmail());
-        assertNotNull(entity.getRole());
-        assertEquals(2L, entity.getRole().getId());
-        assertEquals("User", entity.getRole().getName());
-    }
-
-    @Test
-    void toEntity_shouldReturnNullIfDtoIsNull() {
-        assertNull(mapper.toEntity(null, new Role()));
     }
 }

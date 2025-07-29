@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import id.co.hibank.benchmark.jdbc.exception.NotFoundException;
 import id.co.hibank.benchmark.jdbc.model.Role;
 import id.co.hibank.benchmark.jdbc.repository.RoleRepository;
 
@@ -25,7 +26,7 @@ public class RoleService implements BaseService<Role> {
     public Role get(Long id) {
         Role role = repo.findById(id);
         if (role == null) {
-            throw new IllegalArgumentException("Role not found with id: " + id);
+            throw new NotFoundException("Role not found with id: " + id);
         }
         return role;
     }

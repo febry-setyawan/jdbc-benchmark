@@ -1,29 +1,73 @@
 package id.co.hibank.benchmark.jdbc.controller;
 
+import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 import id.co.hibank.benchmark.jdbc.model.Role;
+import id.co.hibank.benchmark.jdbc.model.dto.RoleDto;
+import id.co.hibank.benchmark.jdbc.model.mapper.RoleMapper;
 import id.co.hibank.benchmark.jdbc.service.RoleService;
 
 @RestController
 @RequestMapping("/roles")
+@Validated
 public class RoleController {
-    private final RoleService service;
-    public RoleController(RoleService s) { this.service = s; }
 
-    @GetMapping public List<Role> getAll() { return service.getAll(); }
-    @PostMapping public void create(@RequestBody Role r) { service.save(r); }
-    @PutMapping("/{id}") public void update(@PathVariable Long id, @RequestBody Role r) { r.setId(id); service.update(r); }
-    @DeleteMapping("/{id}") public void delete(@PathVariable Long id) { service.delete(id); }
-    @GetMapping("/{id}") public Role getById(@PathVariable Long id) { return service.get(id); }
+    private static final Logger log = LoggerFactory.getLogger(RoleController.class);
+
+    private final RoleService service;
+    private final RoleMapper roleMapper;
+
+    public RoleController(RoleService service, RoleMapper roleMapper) {
+        this.service = service;
+        this.roleMapper = roleMapper;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<RoleDto>> getAll() {
+        List<RoleDto> result = service.getAll().stream()
+                .map(roleMapper::toDto)
+                .toList();
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<RoleDto> getById(@PathVariable @Min(1) Long id) {
+        Role role = service.get(id);
+        log.debug("Get role by ID: {}", id);
+        return ResponseEntity.ok(roleMapper.toDto(role));
+    }
+
+    @PostMapping
+    public ResponseEntity<Void> create(@RequestBody @Valid RoleDto dto) {
+        Role role = roleMapper.toEntity(dto);
+        service.save(role);
+        log.info("Role created: {}", role.getId());
+        return ResponseEntity.created(URI.create("/roles/" + role.getId())).build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> update(@PathVariable @Min(1) Long id, @RequestBody @Valid RoleDto dto) {
+        Role updated = roleMapper.toEntity(dto);
+        updated.setId(id);
+        service.update(updated);
+        log.info("Role updated: {}", id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable @Min(1) Long id) {
+        service.delete(id);
+        log.info("Role deleted: {}", id);
+        return ResponseEntity.noContent().build();
+    }
 }

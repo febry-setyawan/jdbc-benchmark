@@ -1,5 +1,6 @@
 package id.co.hibank.benchmark.jdbc.service;
 
+import id.co.hibank.benchmark.jdbc.exception.NotFoundException;
 import id.co.hibank.benchmark.jdbc.model.Role;
 import id.co.hibank.benchmark.jdbc.model.User;
 import id.co.hibank.benchmark.jdbc.repository.UserRepository;
@@ -45,7 +46,7 @@ class UserServiceTest {
     @Test
     void testGet_shouldThrowIfNotFound() {
         when(userRepository.findById(99L)).thenReturn(null);
-        assertThrows(IllegalArgumentException.class, () -> userService.get(99L));
+        assertThrows(NotFoundException.class, () -> userService.get(99L));
     }
 
     @Test

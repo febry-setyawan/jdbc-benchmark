@@ -3,10 +3,18 @@ package id.co.hibank.benchmark.jdbc.model.mapper;
 import id.co.hibank.benchmark.jdbc.model.Role;
 import id.co.hibank.benchmark.jdbc.model.User;
 import id.co.hibank.benchmark.jdbc.model.dto.UserDto;
+import id.co.hibank.benchmark.jdbc.service.RoleService;
+
 import org.springframework.stereotype.Component;
 
 @Component
 public class UserMapper {
+
+    private final RoleService roleService;
+
+    public UserMapper(RoleService roleService) {
+        this.roleService = roleService;
+    }
 
     public UserDto toDto(User user) {
         if (user == null) return null;
@@ -25,13 +33,8 @@ public class UserMapper {
         return dto;
     }
 
-    public User toEntity(UserDto dto, Role role) {
-        if (dto == null) return null;
-        return new User(
-            dto.getId(),
-            dto.getName(),
-            dto.getEmail(),
-            role
-        );
+    public User toEntity(UserDto dto) {
+        Role role = roleService.get(dto.getRoleId());
+        return new User(dto.getId(), dto.getName(), dto.getEmail(), role);
     }
 }
