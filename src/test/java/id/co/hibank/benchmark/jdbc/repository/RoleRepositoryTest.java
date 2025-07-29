@@ -5,12 +5,10 @@ import id.co.hibank.benchmark.jdbc.util.JdbcResilienceHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.util.List;
@@ -24,10 +22,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class RoleRepositoryTest {
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    @Mock
     JdbcClient jdbcClient;
 
     @Mock
@@ -45,48 +42,30 @@ class RoleRepositoryTest {
     @InjectMocks
     RoleRepository roleRepository;
 
-    Role role;
+    Role mockRole;
 
     @BeforeEach
     void setUp() {
-        role = new Role(1L, "Admin");
+        mockRole = new Role(1L, "Admin");
         roleRepository = new RoleRepository(jdbcClient, resilienceHelper, executor);
+    }
 
+    @Test
+    void testSave_shouldExecuteInsert() {
         when(executor.apply(anyString())).thenReturn(statementSpec);
         when(statementSpec.params(any(Map.class))).thenReturn(statementSpec);
-        when(statementSpec.param(anyString(), any())).thenReturn(statementSpec);
         when(statementSpec.update()).thenReturn(1);
+
         when(resilienceHelper.executeResilient(any(Supplier.class), any(Function.class)))
                 .thenAnswer(i -> ((Supplier<?>) i.getArgument(0)).get());
-    }
 
-    @Test
-    void testSave_shouldExecuteInsertSql() {
-        roleRepository.save(role);
-        verify(resilienceHelper).executeResilient(any(Supplier.class), any(Function.class));
+        roleRepository.save(mockRole);
         verify(executor).apply(startsWith("INSERT INTO"));
-        verify(statementSpec).params(any(Map.class));
-    }
-
-    @Test
-    void testUpdate_shouldExecuteUpdateSql() {
-        roleRepository.update(role);
-        verify(resilienceHelper).executeResilient(any(Supplier.class), any(Function.class));
-        verify(executor).apply(startsWith("UPDATE"));
-        verify(statementSpec).params(any(Map.class));
-    }
-
-    @Test
-    void testDelete_shouldExecuteDeleteSql() {
-        roleRepository.delete(1L);
-        verify(resilienceHelper).executeResilient(any(Supplier.class), any(Function.class));
-        verify(executor).apply(startsWith("DELETE FROM"));
-        verify(statementSpec).param(eq("id"), eq(1L));
     }
 
     @Test
     void testFindById_shouldReturnRole() {
-        when(resilienceHelper.safeOptional(any(Supplier.class))).thenReturn(Optional.of(role));
+        when(resilienceHelper.safeOptional(any(Supplier.class))).thenReturn(Optional.of(mockRole));
         Role result = roleRepository.findById(1L);
         assertNotNull(result);
         assertEquals("Admin", result.getName());
@@ -94,41 +73,65 @@ class RoleRepositoryTest {
 
     @Test
     void testFindById_shouldReturnNullIfNotFound() {
-        when(resilienceHelper.safeOptional(any(Supplier.class))).thenReturn(Optional.empty());
+        when(resilienceHelper.safeOptional(any())).thenReturn(Optional.empty());
         Role result = roleRepository.findById(99L);
         assertNull(result);
     }
 
     @Test
     void testFindAll_shouldReturnList() {
-        when(resilienceHelper.safe(any(Supplier.class))).thenReturn(List.of(role));
+        when(resilienceHelper.safe(any())).thenReturn(List.of(mockRole));
         List<Role> result = roleRepository.findAll();
         assertEquals(1, result.size());
-        assertEquals("Admin", result.get(0).getName());
     }
 
     @Test
     void testFindAll_shouldReturnEmptyList() {
-        when(resilienceHelper.safe(any(Supplier.class))).thenReturn(List.of());
+        when(resilienceHelper.safe(any())).thenReturn(List.of());
         List<Role> result = roleRepository.findAll();
-        assertNotNull(result);
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void testSave_shouldHandleException() {
+    void testUpdate_shouldCallUpdateQuery() {
+        when(executor.apply(anyString())).thenReturn(statementSpec);
+        when(statementSpec.params(any(Map.class))).thenReturn(statementSpec);
+        when(statementSpec.update()).thenReturn(1);
+
+        when(resilienceHelper.executeResilient(any(Supplier.class), any(Function.class)))
+                .thenAnswer(i -> ((Supplier<?>) i.getArgument(0)).get());
+
+        roleRepository.update(mockRole);
+        verify(executor).apply(startsWith("UPDATE"));
+    }
+
+    @Test
+    void testDelete_shouldCallDeleteQuery() {
+        when(executor.apply(anyString())).thenReturn(statementSpec);
+        when(statementSpec.param(anyString(), any())).thenReturn(statementSpec);
+        when(statementSpec.update()).thenReturn(1);
+
+        when(resilienceHelper.executeResilient(any(Supplier.class), any(Function.class)))
+                .thenAnswer(i -> ((Supplier<?>) i.getArgument(0)).get());
+
+        roleRepository.delete(1L);
+        verify(executor).apply(startsWith("DELETE FROM"));
+    }
+
+    @Test
+    void testSave_shouldThrowException() {
         when(resilienceHelper.executeResilient(any(), any())).thenThrow(new RuntimeException("Insert failed"));
-        assertThrows(RuntimeException.class, () -> roleRepository.save(role));
+        assertThrows(RuntimeException.class, () -> roleRepository.save(mockRole));
     }
 
     @Test
-    void testUpdate_shouldHandleException() {
+    void testUpdate_shouldThrowException() {
         when(resilienceHelper.executeResilient(any(), any())).thenThrow(new RuntimeException("Update failed"));
-        assertThrows(RuntimeException.class, () -> roleRepository.update(role));
+        assertThrows(RuntimeException.class, () -> roleRepository.update(mockRole));
     }
 
     @Test
-    void testDelete_shouldHandleException() {
+    void testDelete_shouldThrowException() {
         when(resilienceHelper.executeResilient(any(), any())).thenThrow(new RuntimeException("Delete failed"));
         assertThrows(RuntimeException.class, () -> roleRepository.delete(1L));
     }

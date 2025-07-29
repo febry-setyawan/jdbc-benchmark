@@ -51,20 +51,30 @@ public class UserRepository extends JdbcClientDaoImpl<User> {
     }
 
     public List<User> search(String filter, int page, int size, String sortBy, String sortDir) {
-        String sql = "SELECT u.id, u.name, u.email, r.id AS role_id, r.name AS role_name " +
-                    "FROM users u JOIN roles r ON u.role_id = r.id " +
-                    "WHERE LOWER(u.name) LIKE :filter OR LOWER(r.name) LIKE :filter " +
-                    "ORDER BY " + sortBy + " " + sortDir + " LIMIT :limit OFFSET :offset";
+    // Validasi sortBy dan sortDir
+    List<String> allowedSortFields = List.of("id", "name", "email");
+    List<String> allowedSortDirs = List.of("asc", "desc");
 
-        return jdbcClient.sql(sql)
-            .param("filter", "%" + filter.toLowerCase() + "%")
-            .param("limit", size)
-            .param("offset", page * size)
-            .query((rs, rowNum) -> {
-                Role role = new Role(rs.getLong("role_id"), rs.getString("role_name"));
-                return new User(rs.getLong("id"), rs.getString("name"), rs.getString("email"), role);
-            })
-            .list();
-    }
+    String finalSortBy = allowedSortFields.contains(sortBy) ? "u." + sortBy : "u.name";
+    String finalSortDir = allowedSortDirs.contains(sortDir.toLowerCase()) ? sortDir.toUpperCase() : "ASC";
+
+    String sql = "SELECT u.id, u.name, u.email, r.id AS role_id, r.name AS role_name " +
+                 "FROM users u JOIN roles r ON u.role_id = r.id " +
+                 "WHERE LOWER(u.name) LIKE :filter OR LOWER(r.name) LIKE :filter " +
+                 "ORDER BY " + finalSortBy + " " + finalSortDir + " LIMIT :limit OFFSET :offset";
+
+    return jdbcClient.sql(sql)
+        .param("filter", "%" + filter.toLowerCase() + "%")
+        .param("limit", size)
+        .param("offset", page * size)
+        .query((rs, rowNum) -> {
+            Role role = null;
+            if (rs.getObject("role_id") != null) {
+                role = new Role(rs.getLong("role_id"), rs.getString("role_name"));
+            }
+            return new User(rs.getLong("id"), rs.getString("name"), rs.getString("email"), role);
+        })
+        .list();
+}
 
 }

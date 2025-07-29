@@ -16,7 +16,7 @@ public abstract class JdbcClientDaoImpl<T> implements BaseDao<T> {
     protected final JdbcClient jdbcClient;
     private final Class<T> type;
     private final String tableName;
-    private final JdbcResilienceHelper resilienceHelper;
+    protected final JdbcResilienceHelper resilienceHelper;
     private final Function<String, JdbcClient.StatementSpec> executor;
 
     protected JdbcClientDaoImpl(
