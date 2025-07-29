@@ -1,12 +1,13 @@
 package id.co.hibank.benchmark.jdbc.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import id.co.hibank.benchmark.jdbc.exception.NotFoundException;
 import id.co.hibank.benchmark.jdbc.model.User;
 import id.co.hibank.benchmark.jdbc.repository.UserRepository;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Objects;
 
 @Service
 public class UserService implements BaseService<User> {
@@ -18,6 +19,7 @@ public class UserService implements BaseService<User> {
     }
 
     @Override
+    @Transactional
     public void save(User user) {
         if (user == null) {
             throw new IllegalArgumentException("User must not be null");
@@ -26,6 +28,7 @@ public class UserService implements BaseService<User> {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public User get(Long id) {
         User user = repo.findById(id);
         if (user == null) {
@@ -35,11 +38,13 @@ public class UserService implements BaseService<User> {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<User> getAll() {
         return repo.findAll();
     }
 
     @Override
+    @Transactional
     public void update(User user) {
         if (user == null) {
             throw new IllegalArgumentException("User must not be null");
@@ -51,10 +56,12 @@ public class UserService implements BaseService<User> {
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
         repo.delete(id);
     }
 
+    @Transactional(readOnly = true)
     public List<User> search(String filter, int page, int size, String sortBy, String sortDir) {
         return repo.search(filter, page, size, sortBy, sortDir);
     }

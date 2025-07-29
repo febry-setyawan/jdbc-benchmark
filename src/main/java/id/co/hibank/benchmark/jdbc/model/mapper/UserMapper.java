@@ -1,11 +1,11 @@
 package id.co.hibank.benchmark.jdbc.model.mapper;
 
+import org.springframework.stereotype.Component;
+
 import id.co.hibank.benchmark.jdbc.model.Role;
 import id.co.hibank.benchmark.jdbc.model.User;
 import id.co.hibank.benchmark.jdbc.model.dto.UserDto;
 import id.co.hibank.benchmark.jdbc.service.RoleService;
-
-import org.springframework.stereotype.Component;
 
 @Component
 public class UserMapper {
@@ -23,7 +23,7 @@ public class UserMapper {
         dto.setId(user.getId());
         dto.setName(user.getName());
         dto.setEmail(user.getEmail());
-
+        
         Role role = user.getRole();
         if (role != null) {
             dto.setRoleId(role.getId());

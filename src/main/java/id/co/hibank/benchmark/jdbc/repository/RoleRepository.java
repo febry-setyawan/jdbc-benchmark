@@ -1,16 +1,17 @@
 package id.co.hibank.benchmark.jdbc.repository;
 
-import id.co.hibank.benchmark.jdbc.dao.JdbcClientDaoImpl;
-import id.co.hibank.benchmark.jdbc.model.Role;
-import id.co.hibank.benchmark.jdbc.util.JdbcResilienceHelper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.stereotype.Repository;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
+
+import id.co.hibank.benchmark.jdbc.dao.JdbcClientDaoImpl;
+import id.co.hibank.benchmark.jdbc.model.Role;
+import id.co.hibank.benchmark.jdbc.util.JdbcResilienceHelper;
 
 @Repository
 public class RoleRepository extends JdbcClientDaoImpl<Role> {
@@ -32,6 +33,7 @@ public class RoleRepository extends JdbcClientDaoImpl<Role> {
         return map;
     }
 
+    // Metode search yang diperbarui untuk mendukung pencarian berdasarkan ID atau Nama
     public List<Role> search(String filter, int page, int size, String sortBy, String sortDir) {
         List<String> allowedSortFields = List.of("id", "name");
         List<String> allowedSortDirs = List.of("asc", "desc");
@@ -39,13 +41,30 @@ public class RoleRepository extends JdbcClientDaoImpl<Role> {
         String finalSortBy = allowedSortFields.contains(sortBy) ? sortBy : "name";
         String finalSortDir = allowedSortDirs.contains(sortDir.toLowerCase()) ? sortDir.toUpperCase() : "ASC";
 
-        String sql = "SELECT id, name FROM roles WHERE LOWER(name) LIKE :filter " +
-                     "ORDER BY " + finalSortBy + " " + finalSortDir + " LIMIT :limit OFFSET :offset";
+        StringBuilder sqlBuilder = new StringBuilder("SELECT id, name FROM roles WHERE 1=1 ");
+        Map<String, Object> params = new HashMap<>();
 
-        return jdbcClient.sql(sql)
-                .param("filter", "%" + filter.toLowerCase() + "%")
-                .param("limit", size)
-                .param("offset", page * size)
+        if (filter != null && !filter.trim().isEmpty()) {
+            // Coba parsing filter sebagai Long untuk ID
+            try {
+                Long filterId = Long.parseLong(filter.trim());
+                sqlBuilder.append("AND (LOWER(name) LIKE :nameFilter OR id = :idFilter) ");
+                params.put("idFilter", filterId);
+            } catch (NumberFormatException e) {
+                // Jika bukan angka, cari berdasarkan nama saja
+                sqlBuilder.append("AND LOWER(name) LIKE :nameFilter ");
+            }
+            params.put("nameFilter", "%" + filter.toLowerCase() + "%");
+        }
+
+        sqlBuilder.append("ORDER BY ").append(finalSortBy).append(" ").append(finalSortDir);
+        sqlBuilder.append(" LIMIT :limit OFFSET :offset");
+
+        params.put("limit", size);
+        params.put("offset", page * size);
+
+        return jdbcClient.sql(sqlBuilder.toString())
+                .params(params)
                 .query((rs, rowNum) -> new Role(rs.getLong("id"), rs.getString("name")))
                 .list();
     }

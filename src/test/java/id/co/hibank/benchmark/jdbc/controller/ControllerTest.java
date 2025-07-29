@@ -52,9 +52,9 @@ class ControllerTest {
     @BeforeEach
     void setUp() {
         role = new Role(1L, "Admin");
-        user = new User(1L, "jdoe", "John Doe", role);
+        user = new User(1L, "jdoe", "john.doe@gmail.com", role);
         roleDto = new RoleDto(1L, "Admin");
-        userDto = new UserDto(1L, "jdoe", "John Doe", 1L, "Admin");
+        userDto = new UserDto(1L, "jdoe", "john.doe@gmail.com", 1L, "Admin");
 
         when(userService.getAll()).thenReturn(List.of(user));
         when(userService.get(1L)).thenReturn(user);

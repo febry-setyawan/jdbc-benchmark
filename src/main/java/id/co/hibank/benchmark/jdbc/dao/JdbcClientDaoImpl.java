@@ -112,7 +112,9 @@ public abstract class JdbcClientDaoImpl<T> implements BaseDao<T> {
 
     protected Function<Throwable, Integer> fail(String message) {
         return ex -> {
-            log.error("{}: {}", message, ex.getMessage());
+            log.error("{}: {}", message, ex.getMessage(), ex); // Tetap sertakan 'ex' untuk stack trace lengkap
+            // Melemparkan RuntimeException, yang merupakan superclass dari DataAccessException,
+            // dan selalu dapat diinstansiasi.
             throw new RuntimeException(message, ex);
         };
     }

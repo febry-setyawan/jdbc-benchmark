@@ -16,6 +16,7 @@ logging:
   level:
     org.springframework.jdbc.core: DEBUG
     io.github.resilience4j: DEBUG
+    id.co.hibank.benchmark.jdbc: DEBUG 
 
 resilience4j:
   retry:
@@ -44,3 +45,7 @@ management:
   endpoint:
     health:
       show-details: always
+
+mvc:
+  favicon:
+    enabled: false

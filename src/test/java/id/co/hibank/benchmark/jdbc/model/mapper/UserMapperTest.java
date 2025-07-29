@@ -1,18 +1,17 @@
 package id.co.hibank.benchmark.jdbc.model.mapper;
 
-import id.co.hibank.benchmark.jdbc.model.Role;
-import id.co.hibank.benchmark.jdbc.model.User;
-import id.co.hibank.benchmark.jdbc.model.dto.UserDto;
-import id.co.hibank.benchmark.jdbc.service.RoleService;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import id.co.hibank.benchmark.jdbc.model.Role;
+import id.co.hibank.benchmark.jdbc.model.User;
+import id.co.hibank.benchmark.jdbc.model.dto.UserDto;
+import id.co.hibank.benchmark.jdbc.service.RoleService;
 
 @ExtendWith(MockitoExtension.class)
 class UserMapperTest {

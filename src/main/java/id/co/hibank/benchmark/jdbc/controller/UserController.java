@@ -12,7 +12,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import id.co.hibank.benchmark.jdbc.model.User;
-import id.co.hibank.benchmark.jdbc.model.dto.RoleDto;
 import id.co.hibank.benchmark.jdbc.model.dto.UserDto;
 import id.co.hibank.benchmark.jdbc.model.mapper.UserMapper;
 import id.co.hibank.benchmark.jdbc.service.UserService;
