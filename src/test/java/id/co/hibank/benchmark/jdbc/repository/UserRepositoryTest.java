@@ -206,7 +206,7 @@ class UserRepositoryTest {
         String capturedSql = sqlCaptor.getValue();
         assertNotNull(capturedSql);
         assertTrue(capturedSql.startsWith("SELECT"));
-        assertTrue(capturedSql.contains("FROM users u JOIN roles r ON u.role_id = r.id"));
+        assertTrue(capturedSql.contains("FROM users u LEFT JOIN roles r ON u.role_id = r.id"));
     }
 
     @SuppressWarnings("unchecked")

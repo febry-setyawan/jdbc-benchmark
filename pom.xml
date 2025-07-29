@@ -161,8 +161,30 @@
 			<groupId>com.github.ben-manes.caffeine</groupId>
 			<artifactId>caffeine</artifactId>
 		</dependency>
-	</dependencies>
 
+		<!-- Testcontainers dependencies (managed by testcontainers-bom) -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId> <!-- Contoh untuk PostgreSQL, sesuaikan dengan DB Anda -->
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	<dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>1.19.8</version> <!-- Periksa versi terbaru di Testcontainers.org -->
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 	<build>
 		<plugins>
 			<plugin>
